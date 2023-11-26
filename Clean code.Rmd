@@ -1,0 +1,355 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+#Importing Data
+```{r}
+lakedata=read.csv("RID_196_Chem_L375.csv")
+summary(lakedata)
+library(tidyverse)
+View(lakedata)
+View(lakedata_no_recovery)
+lakedata_no_recovery=lakedata%>%
+  filter(Treatment!="After")%>%
+  filter(characteristic_name!="NA")
+```
+
+#Plot for main six variables
+```{r}
+#target <- c(unique(lakedata$characteristic_name))
+#significant_variables=filter(lakedata, characteristic_name %in% target)
+#average_sigvariables_by_year=significant_variables%>%
+#  group_by(year,characteristic_name)%>%
+ # summarise(Mean=mean(result_value))
+#ggplot(average_sigvariables_by_year,aes(x=year,y=Mean))+
+#  geom_line()+ geom_point()+geom_vline(xintercept = 2002,color = "blue", size=1.5)+geom_vline(xintercept = 2008,  color = "blue", size=1.5)+facet_wrap(vars(characteristic_name),scales = "free_y")
+
+characteristic.names=c(unique(lakedata$characteristic_name))
+plot_list2=list()
+for( i in 1:length(characteristic.names)){
+   plot.data= generalplotfunction(characteristic.names[i])
+ plot_list2[[i]] <- plot.data
+}
+plot_list2
+```
+#Creating a function to view plot for specific variables
+```{r}
+#No need this after the loop above.
+generalplotfunction=function(z){
+  data=lakedata%>%
+    filter(characteristic_name==z)%>%
+    group_by(year)%>%
+    summarise(mean=mean(result_value))
+graph=ggplot(data,aes(x=year,y=mean))+
+    geom_line()+ geom_point()+geom_vline(xintercept = 2002,color = "blue", size=1.5)+geom_vline(xintercept = 2008,  color = "blue", size=1.5)+labs(title=z)
+return(graph)
+}
+
+library(ggpubr)
+
+a=generalplotfunction("PARTP")
+b=generalplotfunction("PARTN")
+c=generalplotfunction("PARTC")
+d=generalplotfunction("TDP")
+e=generalplotfunction("SO4")
+f=generalplotfunction("TDN")
+
+ggarrange(a, b, c,d,e,f+ rremove("x.text"), 
+          ncol = 2, nrow = 3)
+target2=unique(lakedata$characteristic_name)
+target2.vec=as.data.frame(target2)
+ class(target2)
+ 
+for (i in target2) {
+  generalplotfunction(i)
+}
+```
+#Plotting Histograms
+```{r}
+histogramfunction= function(charateristic)
+{
+  datafunc=lakedata%>%
+    filter(characteristic_name==charateristic)%>%
+    select(result_value)
+  graph=ggplot(datafunc, aes(x = result_value)) +
+    geom_histogram() +labs(title=charateristic)
+  return(graph)
+}
+
+a=histogramfunction("PARTP")
+b=histogramfunction("PARTN")
+c=histogramfunction("CHLA")
+d=histogramfunction("TDP")
+e=histogramfunction("SO4")
+f=histogramfunction("TDN")
+
+ggarrange(a, b, c,d,e,f+ rremove("x.text"), 
+          ncol = 2, nrow = 3)
+
+histogramfunction(target2[1])
+for (i in target2) {
+  histogramfunction(target2[i])
+}
+normalfunction=function(names) {
+  n.data=lakedata%>%
+    filter(characteristic_name==names)%>%
+    select(result_value)
+   num.data=as.numeric(n.data$result_value)
+  norm.model=shapiro.test(num.data)
+ return(norm.model$p.value)
+}
+
+characteristic.names=c(unique(lakedata$characteristic_name))
+plot_list.norm=list()
+for( i in 1:length(characteristic.names)){
+   plot.data= histogramfunction(characteristic.names[i])
+ plot_list.norm[[i]] <- plot.data
+}
+plot_list.norm
+```
+#Models with all data 
+#Phosphorus 
+```{r}
+#No need these just running mixed models below
+library(lme4)
+library(lmerTest)
+library(MuMIn)
+
+Partpdata=lakedata_no_recovery%>%
+  filter(characteristic_name=="PARTP")
+m1=aov(result_value~Treatment+as.factor(year),data = Partpdata)
+m2=glm(result_value~Treatment,data = Partpdata)
+P_model_MM <- lmer(result_value~Treatment+(1|as.factor(Partpdata$year)), data=Partpdata, REML=FALSE)
+summary(P_model_MM)
+ggplot(data=Partpdata, aes(x=Treatment,y=result_value))+
+  geom_boxplot()
+
+
+Tdpdata=lakedata_no_recovery%>%
+  filter(characteristic_name=="TDP")
+summary(aov(result_value~Treatment,data = Tdpdata))
+summary(glm(result_value~Treatment,data = Tdpdata))
+P_model_MM <- lmer(result_value~Treatment+(1|as.factor(Tdpdata$year)), data=Tdpdata, REML=FALSE)
+summary(P_model_MM)
+ggplot(data=Tdpdata, aes(x=Treatment,y=result_value))+
+  geom_boxplot()
+
+AICc(m1, m2,P_model_MM)
+
+```
+#Nitrogen
+```{r}
+#No need these just running mixed models below
+Partndata=lakedata_no_recovery%>%
+  filter(characteristic_name=="PARTN")
+summary(aov(result_value~Treatment,data = Partndata))
+summary(glm(result_value~Treatment,data = Partndata))
+P_model_MM <- lmer(result_value~Treatment+(1|as.factor(Partndata$year)), data=Partndata, REML=FALSE)
+summary(P_model_MM)
+ggplot(data=Partndata, aes(x=Treatment,y=result_value))+
+  geom_boxplot()
+
+
+TdNdata=lakedata_no_recovery%>%
+  filter(characteristic_name=="TDN")
+summary(aov(result_value~Treatment,data = TdNdata))
+summary(glm(result_value~Treatment,data = TdNdata))
+P_model_MM <- lmer(result_value~Treatment+(1|as.factor(TdNdata$year)), data=TdNdata, REML=FALSE)
+summary(P_model_MM)
+ggplot(data=TdNdata, aes(x=Treatment,y=result_value))+
+  geom_boxplot()
+
+
+```
+
+#Permutation
+```{r}
+#Inital Permutation code
+permutation_function <- function(){
+  reshuffled <- partpdata2
+  reshuffled$TreatmentNEW <- sample(reshuffled$Treatment, size = nrow(reshuffled), replace = F)
+  
+  before <- reshuffled %>% subset(TreatmentNEW == "Before") %>% summarise(mean = mean(result_value))
+  during <- reshuffled %>% subset(TreatmentNEW == "During") %>% summarise(mean = mean(result_value))
+
+  return(before-during
+    )
+}
+
+gaps <- c()
+
+for (i in 1:1000){
+  gaps[i] <- permutation_function()
+}
+
+hist(unlist(gaps))
+```
+#Creating function for LMM
+```{r}
+#have to check this
+mixedmodelfunction=function(characteristic){
+  mixed_model_data=lakedata_no_recovery%>%
+    filter(characteristic_name==characteristic)%>%
+    select(result_value,Treatment,year)
+ 
+ return(summary(lmer(result_value~Treatment+(1|as.factor(mixed_model_data$year)), data=mixed_model_data, REML=FALSE)))
+}
+
+mixedmodelfunction("PARTC")
+```
+#creating function for Permutation
+```{r}
+library(tidyverse)
+#Making Permutation Function
+filterfunction=function(characteristic){
+  data.perm=lakedata_no_recovery%>%
+  filter(characteristic_name==characteristic)%>%
+  select(Treatment,result_value,year)
+  return(data.perm)
+  }
+permutation_function <- function(data12){
+  reshuffled <- data12
+  reshuffled$TreatmentNEW <- sample(reshuffled$Treatment, size = nrow(reshuffled), replace = F)
+  model=glm(result_value~TreatmentNEW, data = reshuffled)
+   #lmer(result_value~TreatmentNEW+(1|as.factor(reshuffled$year)), data=reshuffled, REML=FALSE)
+  summary.model=summary(model)
+  return(summary.model$coefficients[2,1])
+}
+
+
+final.perm.function= function(characteristic){
+filtered.data=filterfunction(characteristic)
+estimates <- c()
+for (i in 1:10000){
+  estimates[i] <- permutation_function(filtered.data)
+}
+estimates=as.data.frame(estimates)
+ data.perm=lakedata_no_recovery%>%
+  filter(characteristic_name==characteristic)%>%
+  select(Treatment,result_value,year)
+model.new=summary(glm(result_value~Treatment, data = data.perm))
+lol=model.new$coefficients[2,1]
+plot_s=ggplot(estimates, aes(x=estimates)) + 
+ geom_histogram( colour="black", fill="white")+ geom_vline(aes(xintercept=lol),
+            color="blue", linetype="dashed", size=1)+labs(title =characteristic)
+return(plot_s)
+}
+characteristic.names=c(unique(lakedata_no_recovery$characteristic_name))
+plot_list <- list()
+for( i in 1:(length(characteristic.names)-1)){
+   plot.data= final.perm.function(characteristic.names[i])
+ plot_list[[i]] <- plot.data
+}
+
+plot_list
+```
+
+
+#Function for ALL LMMs
+```{r}
+#Having issues with this code. The things run induvidually but not in the loop as a function
+returnpvalueforllm=function(characteristic){
+  datafortest=filterfunction(characteristic)
+  model.new= lmer(result_value~Treatment+(1|as.factor(datafortest$year)), data=datafortest, REML=FALSE)
+  summary.model=summary(model.new)
+  return(summary.model)
+}
+
+returnpvalueforllm("ALK")
+pvalues=c()
+for( i in 1:(length(characteristic.names)-1)){
+  pvalues[i]=  returnpvalueforllm(characteristic.names[i])
+
+}
+pvalues=c()
+
+```
+
+
+#Running Aarimas
+
+```{r}
+library(forecast)
+alldataforecastfunction=function(y){
+  data1=lakedata%>%
+    filter(characteristic_name==y)%>%
+    select(result_value)
+  model3=auto.arima(data1) 
+  summary(model3)
+  forecast_data3 <- forecast(model3, 20) 
+  plot=plot(forecast_data3, main = y)
+  return(plot)
+}
+beforeforecastfunction=function(y){
+  data1=lakedata%>%
+    filter(characteristic_name==y)%>%
+    filter(year<2003)%>%
+    select(result_value)
+  model3=auto.arima(data1) 
+  summary(model3)
+  forecast_data3 <- forecast(model3, 20) 
+  plot=plot(forecast_data3, main = y)
+  return(plot)
+}
+
+duringforecastfunction=function(y){
+  data1=lakedata%>%
+    filter(characteristic_name==y)%>%
+    filter(year<2007)%>%
+    select(result_value)
+  model3=auto.arima(data1) 
+  summary(model3)
+  forecast_data3 <- forecast(model3, 20) 
+  plot=plot(forecast_data3, main = y)
+  return(plot)
+}
+ariimalist=list()
+for( i in 1:(length(characteristic.names)-1)){
+   plot.data= alldataforecastfunction(characteristic.names[i])
+ ariimalist[[i]] <- plot.data
+}
+beforeariimalist=list()
+for( i in 1:(length(characteristic.names)-1)){
+   plot.data= beforeforecastfunction(characteristic.names[i])
+ beforeariimalist[[i]] <- plot.data
+}
+
+duringariimalist=list()
+for( i in 1:(length(characteristic.names)-1)){
+   plot.data= beforeforecastfunction(characteristic.names[i])
+ duringariimalist[[i]] <- plot.data
+}
+ariimalist
+```
+
+
+#ALL DATA INTERPOLATED
+```{r}
+interpolationfunction=function(k){
+  data3=lakedata%>%
+    filter(characteristic_name== k)%>%
+    group_by(year)%>%
+    summarise(mean=mean(result_value))
+  allyears=seq(1982,2022,1)
+  dfallyears=data.frame(year=allyears)
+  merged_data <- merge(dfallyears, data3, by = "year", all = TRUE)
+  finaldata=merged_data%>%
+    select(mean)
+  na_p_data2 <- na.interp(finaldata)
+  added_data_P=as.data.frame(na_p_data2)
+  autoplot(na_p_data2, series="Interpolated") +
+    autolayer(as.ts(finaldata), series="Original") +
+    geom_point()+
+    scale_colour_manual(values=c(`Interpolated`="red",`Original`="Blue"))+
+    labs(title = k) +geom_vline(xintercept = c(22, 26), linetype = "dashed", color = "red")
+}
+
+interplatedlist=list()
+for( i in 1:(length(characteristic.names)-1)){
+   plot.data= interpolationfunction(characteristic.names[i])
+ interplatedlist[[i]] <- plot.data
+}
+interplatedlist
+```
+
