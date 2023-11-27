@@ -1,3 +1,5 @@
+#print(hi!)
+
 lakedata=read.csv("RID_196_Chem_L375.csv")
 summary(lakedata)
 library(tidyverse)
@@ -27,8 +29,7 @@ return(graph)
 }
 
 library(ggpubr)
-ggarrange(a, b, c,d,e,f+ rremove("x.text"), 
-          ncol = 2, nrow = 3)
+
 a=generalplotfunction("PARTP")
 b=generalplotfunction("PARTN")
 c=generalplotfunction("PARTC")
@@ -36,9 +37,9 @@ d=generalplotfunction("TDP")
 e=generalplotfunction("SO4")
 f=generalplotfunction("TDN")
 
+ggarrange(a, b, c,d,e,f+ rremove("x.text"), 
+          ncol = 2, nrow = 3)
 #Trying to look at the the distribution
-
-summary(lakedata)
 
 histogramfunction= function(charateristic)
 {
@@ -48,26 +49,15 @@ histogramfunction= function(charateristic)
   return(hist(datafunc$result_value,main = charateristic))
 }
 
-par(mfrow = c(2, 2))
+par(mfrow = c(2, 3))
 histogramfunction("PARTN")
 histogramfunction("PARTP")
 histogramfunction("PARTC")
-histogramfunction("SO4")
+histogramfunction("TDP")
+histogramfunction("TDN")
+histogramfunction("CHLA")
 
-
-
-
-
-
-
-PARTPDATA=filter(lakedata, characteristic_name=="PARTP")
-
-
-average_sigvariables_by_year=PARTPDATA%>%
-  group_by(year,characteristic_name)%>%
-  summarise(Mean=mean(result_value))
-
-PARTPDATA <- PARTPDATA %>% mutate(yearfactor = as.factor(year))
+#Should we normal
 
 library(lme4)
 library(lmerTest)
@@ -280,19 +270,22 @@ alldataforecastfunction=function(y){
 par(mfrow = c(2, 2))
 alldataforecastfunction("PARTN")
 alldataforecastfunction("PARTP")
+alldataforecastfunction("CHLA")
 alldataforecastfunction("PARTC")
-alldataforecastfunction("SO4")
+
 par(mfrow = c(2, 2))
 alldataforecastfunction("TDP")
 alldataforecastfunction("TDN")
 alldataforecastfunction("PARTN")
-alldataforecastfunction("DOC")
+alldataforecastfunction("CHLA")
 
 #ALL INTERPOLATION
 
 library(forecast)
 #General 
 na_p_data=read.csv("pdata.csv")
+na_p_datanew=na_p_data%>%
+  select("P")
 class(na_p_datanew)
 na_p_data2 <- na.interp(na_p_datanew)
 added_data_P=as.data.frame(na_p_data2)
@@ -331,12 +324,13 @@ ggarrange(a1, b1, c1,d1+ rremove("x.text"),
           ncol = 2, nrow = 3)
 a1=interpolationfunction("PARTP")
 b1=interpolationfunction("PARTC")
-interpolationfunction("PARTC")
+c1=interpolationfunction("PARTC")
 d1=interpolationfunction("TDP")
 
 for (j in 1:length(target)){
   save(interpolationfunction(target[j]))
 }
+
 
 #Running arima with interpolated data
 
@@ -347,4 +341,39 @@ forecast_dataint <- forecast(modelint, 20)
 print(forecast_dataint)
 
 plot(forecast_dataint, main = "forecasting_data for rain_ts")
+
+#Regression
+
+glm()
+library(tidyverse)
+lakedata_wide1 <- lakedata %>% select("characteristic_name", "result_value") %>% 
+  group_by("characteristic_name")
+  pivot_wider(1)
+  
+df <- NULL
+charas=unique(lakedata$characteristic_name)
+for (name in charas){
+  thingz <- lakedata %>% select("characteristic_name", "result_value") %>% subset(characteristic_name == name)
+  df <- cbind(df, thingz$result_value)
+}
+
+colnames(df) <- unique(lakedata$characteristic_name)
+
+lakedatanew= lakedata %>% select(characteristic_name,result_value)
+lakedatanew$characteristic_name <- as.factor(lakedatanew$characteristic_name)
+lakedatanew$result_value <- as.numeric(lakedatanew$result_value)
+
+lakedatanew %>% 
+  pivot_wider(names_from = characteristic_name, values_from = result_value)
+lakedatanew2<-lakedatanew %>%
+  group_by(characteristic_name) %>%
+  mutate(row = row_number()) %>%
+  tidyr::pivot_wider(names_from = characteristic_name, values_from = result_value) %>%
+  select(-row)
+str(lakedatanew)
+View(lakedatanew2)
+
+summary(glm(lakedatanew2$CA~lakedatanew2$CL))
+
+#control for treatment 
 
