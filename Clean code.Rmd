@@ -9,13 +9,47 @@ lakedata=read.csv("RID_196_Chem_L375.csv")
 summary(lakedata)
 library(tidyverse)
 View(lakedata)
-View(lakedata_no_recovery)
-lakedata_no_recovery=lakedata%>%
-  filter(Treatment!="After")%>%
+
+# mutate a column that specifies before, during, and after aquaculture
+before_data <- lakedata %>% 
+  filter(year < 2003) %>% 
+  mutate(Treatment = "Before")
+
+during_data <- lakedata %>% 
+  filter(year >= 2003 & year <= 2007) %>% 
+  mutate(Treatment = "During")
+
+after_data <- lakedata %>% 
+  filter(year > 2007) %>% 
+  mutate(Treatment = "After")
+
+new_lakedata <- as.data.frame(rbind(before_data, during_data, after_data))
+View(new_lakedata)
+
+# create a dataframe that has all observations before and during aquaculture
+lakedata_no_recovery <- new_lakedata %>%
+  filter(Treatment!="After") %>%
   filter(characteristic_name!="NA")
+View(lakedata_no_recovery)
 ```
 
-#Plot for main six variables
+
+#Creating a function to plot the average value of a specified variable in one year over time.
+```{r}
+generalplotfunction=function(z){
+  data=new_lakedata%>%
+    filter(characteristic_name==z)%>%
+    group_by(year)%>%
+    summarise(mean=mean(result_value))
+graph=ggplot(data,aes(x=year,y=mean))+
+    geom_line()+ geom_point()+geom_vline(xintercept = 2002,color = "blue", linewidth=1.5)+geom_vline(xintercept = 2008,  color = "blue", size=1.5)+labs(title=z)
+return(graph)
+}
+
+```
+
+
+#Plot all the variables 
 ```{r}
 #target <- c(unique(lakedata$characteristic_name))
 #significant_variables=filter(lakedata, characteristic_name %in% target)
@@ -33,31 +67,26 @@ for( i in 1:length(characteristic.names)){
 }
 plot_list2
 ```
-#Creating a function to view plot for specific variables
-```{r}
-#No need this after the loop above.
-generalplotfunction=function(z){
-  data=lakedata%>%
-    filter(characteristic_name==z)%>%
-    group_by(year)%>%
-    summarise(mean=mean(result_value))
-graph=ggplot(data,aes(x=year,y=mean))+
-    geom_line()+ geom_point()+geom_vline(xintercept = 2002,color = "blue", size=1.5)+geom_vline(xintercept = 2008,  color = "blue", size=1.5)+labs(title=z)
-return(graph)
-}
 
+
+
+#Plot the six main variables 
+```{r}
 library(ggpubr)
 
-a=generalplotfunction("PARTP")
-b=generalplotfunction("PARTN")
-c=generalplotfunction("PARTC")
-d=generalplotfunction("TDP")
-e=generalplotfunction("SO4")
-f=generalplotfunction("TDN")
+PARTP_timeseries <- generalplotfunction("PARTP")
+PARTN_timeseries <- generalplotfunction("PARTN")
+TDP_timeseries <- generalplotfunction("TDP")
+SO4_timeseries <- generalplotfunction("SO4")
+TDN_timeseries <- generalplotfunction("TDN")
+CHLA_timeseries <- generalplotfunction("CHLA")
 
-ggarrange(a, b, c,d,e,f+ rremove("x.text"), 
+ggarrange(PARTP_timeseries, PARTN_timeseries, TDP_timeseries,
+          SO4_timeseries, TDN_timeseries, CHLA_timeseries+ rremove("x.text"), 
           ncol = 2, nrow = 3)
-target2=unique(lakedata$characteristic_name)
+
+# confused by this part of the code (Karen)
+target2=unique(new_lakedata$characteristic_name)
 target2.vec=as.data.frame(target2)
  class(target2)
  
@@ -65,11 +94,13 @@ for (i in target2) {
   generalplotfunction(i)
 }
 ```
+
+
 #Plotting Histograms
 ```{r}
 histogramfunction= function(charateristic)
 {
-  datafunc=lakedata%>%
+  datafunc=new_lakedata%>%
     filter(characteristic_name==charateristic)%>%
     select(result_value)
   graph=ggplot(datafunc, aes(x = result_value)) +
@@ -77,57 +108,66 @@ histogramfunction= function(charateristic)
   return(graph)
 }
 
-a=histogramfunction("PARTP")
-b=histogramfunction("PARTN")
-c=histogramfunction("CHLA")
-d=histogramfunction("TDP")
-e=histogramfunction("SO4")
-f=histogramfunction("TDN")
+PARTP_hist <- histogramfunction("PARTP")
+PARTN_hist <- histogramfunction("PARTN")
+CHLA_hist <- histogramfunction("CHLA")
+TDP_hist <- histogramfunction("TDP")
+SO4_hist <- histogramfunction("SO4")
+TDN_hist <- histogramfunction("TDN")
 
-ggarrange(a, b, c,d,e,f+ rremove("x.text"), 
+ggarrange(PARTP_hist, PARTN_hist, CHLA_hist, TDP_hist, SO4_hist,
+          TDN_hist+ rremove("x.text"), 
           ncol = 2, nrow = 3)
 
+
+# confused by this code here (Karen)
 histogramfunction(target2[1])
 for (i in target2) {
   histogramfunction(target2[i])
 }
-normalfunction=function(names) {
-  n.data=lakedata%>%
-    filter(characteristic_name==names)%>%
+
+# creating a function that assesses the data's normality with shapiro test
+normalfunction <- function(names) {
+  n.data=new_lakedata %>%
+    filter(characteristic_name==names) %>%
     select(result_value)
    num.data=as.numeric(n.data$result_value)
   norm.model=shapiro.test(num.data)
  return(norm.model$p.value)
 }
 
-characteristic.names=c(unique(lakedata$characteristic_name))
-plot_list.norm=list()
+# histograms for every variable 
+characteristic.names=c(unique(new_lakedata$characteristic_name))
+plot_list.norm <- list()
 for( i in 1:length(characteristic.names)){
-   plot.data= histogramfunction(characteristic.names[i])
+   plot.data <- histogramfunction(characteristic.names[i])
  plot_list.norm[[i]] <- plot.data
 }
 plot_list.norm
 ```
-#Models with all data 
-#Phosphorus 
+
+
+#Phosphorus models
 ```{r}
 #No need these just running mixed models below
 library(lme4)
 library(lmerTest)
 library(MuMIn)
 
-Partpdata=lakedata_no_recovery%>%
+Partpdata <- lakedata_no_recovery %>%
   filter(characteristic_name=="PARTP")
-m1=aov(result_value~Treatment+as.factor(year),data = Partpdata)
-m2=glm(result_value~Treatment,data = Partpdata)
+
+m1 <- aov(result_value~Treatment+as.factor(year),data = Partpdata)
+m2 <- glm(result_value~Treatment,data = Partpdata)
 P_model_MM <- lmer(result_value~Treatment+(1|as.factor(Partpdata$year)), data=Partpdata, REML=FALSE)
 summary(P_model_MM)
 ggplot(data=Partpdata, aes(x=Treatment,y=result_value))+
   geom_boxplot()
 
 
-Tdpdata=lakedata_no_recovery%>%
+Tdpdata <- lakedata_no_recovery %>%
   filter(characteristic_name=="TDP")
+
 summary(aov(result_value~Treatment,data = Tdpdata))
 summary(glm(result_value~Treatment,data = Tdpdata))
 P_model_MM <- lmer(result_value~Treatment+(1|as.factor(Tdpdata$year)), data=Tdpdata, REML=FALSE)
@@ -138,11 +178,14 @@ ggplot(data=Tdpdata, aes(x=Treatment,y=result_value))+
 AICc(m1, m2,P_model_MM)
 
 ```
-#Nitrogen
+
+
+#Nitrogen models
 ```{r}
 #No need these just running mixed models below
-Partndata=lakedata_no_recovery%>%
+Partndata <- lakedata_no_recovery %>%
   filter(characteristic_name=="PARTN")
+
 summary(aov(result_value~Treatment,data = Partndata))
 summary(glm(result_value~Treatment,data = Partndata))
 P_model_MM <- lmer(result_value~Treatment+(1|as.factor(Partndata$year)), data=Partndata, REML=FALSE)
@@ -151,8 +194,9 @@ ggplot(data=Partndata, aes(x=Treatment,y=result_value))+
   geom_boxplot()
 
 
-TdNdata=lakedata_no_recovery%>%
+TdNdata <- lakedata_no_recovery %>%
   filter(characteristic_name=="TDN")
+
 summary(aov(result_value~Treatment,data = TdNdata))
 summary(glm(result_value~Treatment,data = TdNdata))
 P_model_MM <- lmer(result_value~Treatment+(1|as.factor(TdNdata$year)), data=TdNdata, REML=FALSE)
@@ -163,18 +207,19 @@ ggplot(data=TdNdata, aes(x=Treatment,y=result_value))+
 
 ```
 
+
+
 #Permutation
 ```{r}
 #Inital Permutation code
 permutation_function <- function(){
-  reshuffled <- partpdata2
+  reshuffled <- Partpdata
   reshuffled$TreatmentNEW <- sample(reshuffled$Treatment, size = nrow(reshuffled), replace = F)
   
   before <- reshuffled %>% subset(TreatmentNEW == "Before") %>% summarise(mean = mean(result_value))
   during <- reshuffled %>% subset(TreatmentNEW == "During") %>% summarise(mean = mean(result_value))
 
-  return(before-during
-    )
+  return(before-during)
 }
 
 gaps <- c()
@@ -185,19 +230,68 @@ for (i in 1:1000){
 
 hist(unlist(gaps))
 ```
+
+
+
 #Creating function for LMM
 ```{r}
-#have to check this
-mixedmodelfunction=function(characteristic){
-  mixed_model_data=lakedata_no_recovery%>%
-    filter(characteristic_name==characteristic)%>%
-    select(result_value,Treatment,year)
- 
- return(summary(lmer(result_value~Treatment+(1|as.factor(mixed_model_data$year)), data=mixed_model_data, REML=FALSE)))
+Chladata <- lakedata_no_recovery %>% 
+  filter(characteristic_name == "CHLA")
+SO4data <- lakedata_no_recovery %>%
+  filter(characteristic_name == "SO4")
+
+PARTP_lmm <- lmer(result_value~Treatment+(1|year), data= Partpdata, 
+                  REML = FALSE)
+TDP_lmm <- lmer(result_value~Treatment+(1|year), data= Tdpdata, 
+                  REML = FALSE)
+PARTN_lmm <- lmer(result_value~Treatment+(1|year), data= Partndata, 
+                  REML = FALSE)
+TDN_lmm <- lmer(result_value~Treatment+(1|year), data= TdNdata, 
+                  REML = FALSE)
+CHLA_lmm <- lmer(result_value~Treatment+(1|year), data= Chladata, 
+                  REML = FALSE)
+SO4_lmm <- lmer(result_value~Treatment+(1|year), data= SO4data, 
+                  REML = FALSE)
+
+
+
+# this isn't working right now
+vectorofpvalues <- c()
+for (i in 1:length(characteristic.names)){
+  mixed_model_data <- lakedata_no_recovery %>% 
+    filter(characteristic_name == characteristic.names[i]) %>% 
+    select(result_value, Treatment, year)
+  vectorofpvalues[i] <- summary(lmer(result_value~Treatment+(1|year), data=mixed_model_data, REML = FALSE))$coefficients[2,5]
 }
 
-mixedmodelfunction("PARTC")
+#this works now, but double check implementation of year
+mixedmodelfunction <- function(characteristic){
+  mixed_model_data <- lakedata_no_recovery %>%
+    filter(characteristic_name == characteristic) %>%
+    select(result_value, Treatment, year)
+ 
+ return(summary(lmer(result_value~Treatment+(1|year), data=mixed_model_data, REML=FALSE)))
+}
+
+mixedmodelfunction("PARTP")
+
+
+
+# FOR PARTP (not useful, ignore)
+models <- NULL
+
+for (i in 1:length(unique(Partpdata$year))){
+  data <- Partpdata %>% subset(year == i)
+  models[[i]] <- cbind(
+    summary(lmer(result_value~Treatment+(1|as.factor(Partpdata$year)), data = Partpdata))$coefficients[,c(1,4)],
+    year = unique(Partpdata$year)[i])
+}
+
+do.call(rbind, models)
 ```
+
+
+
 #creating function for Permutation
 ```{r}
 library(tidyverse)
