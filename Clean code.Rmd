@@ -66,6 +66,8 @@ for( i in 1:length(characteristic.names)){
  plot_list2[[i]] <- plot.data
 }
 plot_list2
+
+
 ```
 
 
@@ -73,6 +75,8 @@ plot_list2
 #Plot the six main variables 
 ```{r}
 library(ggpubr)
+library(ggplot2)
+library(cowplot)
 
 PARTP_timeseries <- generalplotfunction("PARTP")
 PARTN_timeseries <- generalplotfunction("PARTN")
@@ -80,10 +84,17 @@ TDP_timeseries <- generalplotfunction("TDP")
 SO4_timeseries <- generalplotfunction("SO4")
 TDN_timeseries <- generalplotfunction("TDN")
 CHLA_timeseries <- generalplotfunction("CHLA")
+ALK_timeseries <- generalplotfunction("ALK")
+CA_timeseries <- generalplotfunction("CA")
+NO2_timeseries <- generalplotfunction("NO2")
+CL_timeseries <- generalplotfunction("CL")
+COND_timeseries <- generalplotfunction("COND")
+MG_timeseries <- generalplotfunction("MG")
 
-ggarrange(PARTP_timeseries, PARTN_timeseries, TDP_timeseries,
-          SO4_timeseries, TDN_timeseries, CHLA_timeseries+ rremove("x.text"), 
-          ncol = 2, nrow = 3)
+
+plot_grid(PARTP_timeseries, PARTN_timeseries, TDP_timeseries,
+          SO4_timeseries, TDN_timeseries, CHLA_timeseries, ALK_timeseries, CA_timeseries, 
+          NO2_timeseries, CL_timeseries, COND_timeseries, MG_timeseries, label_size=12)
 
 # confused by this part of the code (Karen)
 target2=unique(new_lakedata$characteristic_name)
@@ -241,7 +252,7 @@ SO4data <- lakedata_no_recovery %>%
   filter(characteristic_name == "SO4")
 
 PARTP_lmm <- lmer(result_value~Treatment+(1|year), data= Partpdata, 
-                  REML = FALSE)
+                  REML = FALSE); PARTP_lmm
 TDP_lmm <- lmer(result_value~Treatment+(1|year), data= Tdpdata, 
                   REML = FALSE)
 PARTN_lmm <- lmer(result_value~Treatment+(1|year), data= Partndata, 
@@ -251,7 +262,7 @@ TDN_lmm <- lmer(result_value~Treatment+(1|year), data= TdNdata,
 CHLA_lmm <- lmer(result_value~Treatment+(1|year), data= Chladata, 
                   REML = FALSE)
 SO4_lmm <- lmer(result_value~Treatment+(1|year), data= SO4data, 
-                  REML = FALSE)
+                  REML = FALSE); SO4_lmm
 
 
 
@@ -302,8 +313,8 @@ filterfunction=function(characteristic){
   select(Treatment,result_value,year)
   return(data.perm)
   }
-permutation_function <- function(data12){
-  reshuffled <- data12
+permutation_function <- function(data){
+  reshuffled <- data
   reshuffled$TreatmentNEW <- sample(reshuffled$Treatment, size = nrow(reshuffled), replace = F)
   model=glm(result_value~TreatmentNEW, data = reshuffled)
    #lmer(result_value~TreatmentNEW+(1|as.factor(reshuffled$year)), data=reshuffled, REML=FALSE)
@@ -315,7 +326,7 @@ permutation_function <- function(data12){
 final.perm.function= function(characteristic){
 filtered.data=filterfunction(characteristic)
 estimates <- c()
-for (i in 1:10000){
+for (i in 1:1000){
   estimates[i] <- permutation_function(filtered.data)
 }
 estimates=as.data.frame(estimates)
@@ -446,4 +457,6 @@ for( i in 1:(length(characteristic.names)-1)){
 }
 interplatedlist
 ```
+
+
 
