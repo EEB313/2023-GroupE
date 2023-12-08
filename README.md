@@ -5,22 +5,22 @@ Freshwater aquaculture is a growing industry, but has potential negative impacts
 # Description of Data
 The data used in this project was a subset of a larger Lake 375 dataset graciously provided by the researchers at the International Institute for Sustainable Development Experimental Lakes Area. The following describes the variables used:
 
-monitoring_location_name - identifies the location of the observations
-year - identifies the year of the data observations
-characteristic_name - name of parameter variables
-method_speciation - specifies the measure of characteristic_name
-result_value - value of data point measured
-result_unit - unit of result_value
+- `monitoring_location_name` -> identifies the location of the observations
+- `year` -> identifies the year of the data observations
+- `characteristic_name` -> name of parameter variables
+- `method_speciation` -> specifies the measure of characteristic_name
+- `result_value` -> value of data point measured
+- `result_unit` -> unit of result_value
 
 # Author Contributions
-Elli
-Background research on Lake 375, lake ecology, and freshwater system dynamics. Retrieved dataset from IISD-ELA. Provided relevant photos of the ELA lakes used in the presentation. Wrote introduction and abstract for final report. 
-Jaden
-Performed literature review on Lake 375, lake ecology, and freshwater system dynamics. Interpreted the results in the context of this background and conveyed the findings in the presentation and discussion of the final report.
-Karen
-Created figures and figure legends, and wrote the results section in final report. Conducted background research on lake ecology and freshwater system dynamics, annotating and revising final R code. 
-Kumal
-Researched relevant statistical models to interpret dependent time series data. Wrote all of the R code which was used to generate our graphs and interpret our data. Wrote methods for the final report. 
+### Elli
+- Background research on Lake 375, lake ecology, and freshwater system dynamics. Retrieved dataset from IISD-ELA. Provided relevant photos of the ELA lakes used in the presentation. Wrote introduction and abstract for final report. 
+### Jaden
+- Performed literature review on Lake 375, lake ecology, and freshwater system dynamics. Interpreted the results in the context of this background and conveyed the findings in the presentation and discussion of the final report.
+### Karen
+- Created figures and figure legends, and wrote the results section in final report. Conducted background research on lake ecology and freshwater system dynamics, annotating and revising final R code. 
+### Kumal
+- Researched relevant statistical models to interpret dependent time series data. Wrote all of the R code which was used to generate our graphs and interpret our data. Wrote methods for the final report. 
 
 
 All group members believe work was shared fairly and are satisfied by the contributions of the other members. 
