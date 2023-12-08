@@ -14,11 +14,11 @@ The data used in this project was a subset of a larger Lake 375 dataset gracious
 
 # Author Contributions
 ### Elli
-- Background research on Lake 375, lake ecology, and freshwater system dynamics. Retrieved dataset from IISD-ELA. Provided relevant photos of the ELA lakes used in the presentation. Wrote introduction and abstract for final report. 
+- Performed background research and literature review on Lake 375, lake ecology, and freshwater system dynamics. Retrieved dataset from IISD-ELA. Provided relevant photos of the ELA lakes used in the presentation. Wrote introduction and abstract for final report. 
 ### Jaden
 - Performed literature review on Lake 375, lake ecology, and freshwater system dynamics. Interpreted the results in the context of this background and conveyed the findings in the presentation and discussion of the final report.
 ### Karen
-- Created figures and figure legends, and wrote the results section in final report. Conducted background research on lake ecology and freshwater system dynamics, annotating and revising final R code. 
+- Created figures and figure legends, and wrote the results section in final report. Conducted background research on Lake 375, lake ecology and freshwater system dynamics, annotating and revising final R code. 
 ### Kumal
 - Researched relevant statistical models to interpret dependent time series data. Wrote all of the R code which was used to generate our graphs and interpret our data. Wrote methods for the final report. 
 
