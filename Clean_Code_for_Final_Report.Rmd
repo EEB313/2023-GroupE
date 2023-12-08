@@ -13,6 +13,9 @@ library(ggplot2)
 library(forecast)
 #View(lakedata)
 
+
+# We want to look at observations grouped by whether they were taken before aquaculture began (before 2003), during the aquaculture experiment (2003-2007), and after the aquaculture experiment (post 2007)
+
 # mutate a column that specifies before, during, and after aquaculture
 before_data <- lakedata %>% 
   filter(year < 2003) %>% 
@@ -29,110 +32,136 @@ after_data <- lakedata %>%
 new_lakedata <- as.data.frame(rbind(before_data, during_data, after_data))
 #View(new_lakedata)
 
-# create a dataframe that has all observations before and during aquaculture
-#for this we removed NA(which was sodium). The data was saved as NA which made 
-#it difficult to run some statistical analyses. So we removed it. 
+#Create a dataframe that excludes data from after the aquaculture experiment
+# We had very few data points for after 2007, and even less data points when you divide it by water parameter, so it was best to remove and only compare "before" and "during" values
+# We also removed NA (which was sodium) from our characteristics. The data was saved as NA which made it difficult to run some statistical analyses and we were not particularly interested in this variable to begin with.
+
+#The dataframe below will be our main dataframe which we use for our analyses
 lakedata_no_recovery <- new_lakedata %>%
   filter(Treatment!="After") %>%
   filter(characteristic_name!="NA")
 #View(lakedata_no_recovery)
 ```
 
-#Making a function for Data Exploration
+#Making functions for Data Exploration
 ##Creating multiple timeseries 
 ```{r}
-#Function plots the timeseries for each variable added. 
-#Made a for-loop afterwards to run for each variable.
-generalplotfunction=function(z){
-  data=new_lakedata%>%
-    filter(characteristic_name==z)%>%
-    group_by(year)%>%
+#The Function plots the timeseries for each variable. 
+#Made a for-loop afterwards to run each variable at one time.
+generalplotfunction <- function(characeteristic){
+  data <- new_lakedata %>%
+    filter(characteristic_name==characteristic) %>%
+    group_by(year) %>%
     summarise(mean=mean(result_value))
-graph=ggplot(data,aes(x=year,y=mean))+
-    geom_line()+ geom_point()+geom_vline(xintercept = 2002,color = "blue", linewidth=1.5)+geom_vline(xintercept = 2008,  color = "blue", size=1.5)+labs(title=z)
+graph <- ggplot(data,aes(x=year,y=mean))+
+  geom_line()+ 
+  geom_point()+
+  geom_vline(xintercept = 2002,color = "blue", linewidth=1.5)+geom_vline(xintercept = 2008,  color = "blue", size=1.5)+labs(title=z)
 return(graph)
 }
-#For Loop
+
+
+#For Loop to plot all characteristics at once
 characteristic.names=c(unique(lakedata$characteristic_name))
 time_series_plots=list()
 for( i in 1:length(characteristic.names)){
    plot.data= generalplotfunction(characteristic.names[i])
  time_series_plots[[i]] <- plot.data
 }
+
 time_series_plots
 ```
 
 #Plotting all histograms. 
 ```{r}
 #Additional Data Analysis plotting all histograms for the variables.
-histogramfunction= function(charateristic)
-{
-  datafunc=new_lakedata%>%
-    filter(characteristic_name==charateristic)%>%
+histogramfunction <- function(charateristic){
+  data <- new_lakedata %>%
+    filter(characteristic_name==charateristic) %>%
     select(result_value)
-  graph=ggplot(datafunc, aes(x = result_value)) +
-    geom_histogram() +labs(title=charateristic)
+  graph <- ggplot(data, aes(x = result_value)) +
+    geom_histogram() +
+    labs(title=charateristic)
   return(graph)
 }
+
+
 #Running a for-loop through all the function for all the variables.
-characteristic.names=c(unique(new_lakedata$characteristic_name))
+characteristic.names <- c(unique(new_lakedata$characteristic_name))
 histogram_plots <- list()
+
 for( i in 1:length(characteristic.names)){
    plot.data <- histogramfunction(characteristic.names[i])
  histogram_plots[[i]] <- plot.data
 }
 histogram_plots
+
+# Running histograms allows us to check the normality of every variable
+# Determine what kind of tests to run and/or if transformations are necessary
 ```
+
+
 #Data Analysis and Testing
-##Anovas and Modle Selection
+##Anovas and Model Selection
 ```{r}
 #We ran this for a few variables and this is an example for PART P
 library(MuMIn)
 library(lme4)
 library(lmerTest)
 library(forecast)
-main.characteristic.names=c("PARTP","PARTN","TDN","TDP","CHLA")
-dfdata=list()
+
+main.characteristic.names <- c("PARTP","PARTN","TDN","TDP","CHLA")
+dfdata <- list()
+
 for (i in 1:(length(main.characteristic.names))){
-model_selectiom_data=lakedata_no_recovery%>%
+model_selectiom_data <- lakedata_no_recovery%>%
   filter(characteristic_name==main.characteristic.names[i])%>%
   select(Treatment,year,result_value)
-arimadata=model_selectiom_data%>%
+arimadata <- model_selectiom_data%>%
   select(result_value)
-aov.model=aov(result_value~Treatment,data = model_selectiom_data)
-#glm.model=glm(result_value~Treatment,data = model_selectiom_data)
-lmm.model=lmer(result_value~Treatment+(1|year), data=model_selectiom_data, REML=FALSE)
-arima.model=auto.arima(arimadata)
-df=AICc(aov.model,lmm.model,arima.model)
+aov.model <- aov(result_value~Treatment,data = model_selectiom_data)
+#glm.model <- glm(result_value~Treatment,data = model_selectiom_data)
+lmm.model <- lmer(result_value~Treatment+(1|year), data=model_selectiom_data, REML=FALSE)
+arima.model <- auto.arima(arimadata)
+df <- AICc(aov.model,lmm.model,arima.model)
 dfdata[[i]] <- df
 }
+
 dfdata
-#In most cases the AICc for the Lmm was better or equal to the anova so we used the Lmm for the main variables.
-#In all cases the Aarima was the model that explain the variance the best.
+
+#In most cases the AICc for the Lmm was better or equal to the anova so we used the Lmm for the main variables. Our data is not independent or normally distributed so we cannot use anova.
+#In all cases the Arima was the model that explain the variance the best.
 ```
+
 
 ##Linear Mixed Models for all Variables
 ```{r}
 library(lmerTest)
+
 #Creating empty vectors for saving the data.
-vectorofpvalues=c()
-vectorofeffectsize=c()
+vectorofpvalues <- c()
+vectorofeffectsize <- c()
+
 #Characteristic names for the for loop
-characteristic.names=unique(lakedata_no_recovery$characteristic_name)
-#For Loop
+characteristic.names <- unique(lakedata_no_recovery$characteristic_name)
+
+#Create the for loop so we can run every variable at once
 for (i in 1:(length(characteristic.names)-1)){
-  #Here and for loops below, we removed TSS from the characteristic names. This was because the variable had only one value therefore it was hard to run in an statisitical test. 
-  mixed_model_data=lakedata_no_recovery%>%
+  #Here and for loops below, we removed TSS from the characteristic names. This was because the variable had only one value therefore it was hard to run in an statistical test. 
+  mixed_model_data <- lakedata_no_recovery%>%
     filter(characteristic_name==characteristic.names[i])%>%
     select(result_value,Treatment,year)
-   vectorofpvalues[i]=summary(lmer(result_value~Treatment+(1|as.factor(mixed_model_data$year)), data=mixed_model_data, REML=FALSE))$coefficients[2,5]
- vectorofeffectsize[i]=(summary(lmer(result_value~Treatment+(1|as.factor(mixed_model_data$year)), data=mixed_model_data, REML=FALSE)))$coefficients[2,1]
+   vectorofpvalues[i] <- summary(lmer(result_value~Treatment+(1|as.factor(mixed_model_data$year)), data=mixed_model_data, REML=FALSE))$coefficients[2,5]
+ vectorofeffectsize[i] <- (summary(lmer(result_value~Treatment+(1|as.factor(mixed_model_data$year)), data=mixed_model_data, REML=FALSE)))$coefficients[2,1]
 }
+
 #Creating vector with true/false if Pvalues are less than 0.05
 signifcance <- vectorofpvalues < 0.05
-#Creating initial dataframe with characteristic name,pvalue, true/false for pvalue being greater than 0.05 and effect size for each model. 
-pvalues_and_characteristic_name=data.frame(characteristic = characteristic.names[1:19], P.value = vectorofpvalues,signifcance.of.pvalue=signifcance,effect.size=vectorofeffectsize)
-#final dataframe
+
+#Creating initial dataframe with characteristic name, pvalue, true/false for pvalue being greater than 0.05 and effect size for each model. 
+pvalues_and_characteristic_name <- data.frame(characteristic=characteristic.names[1:19], P.value=vectorofpvalues, signifcance.of.pvalue=signifcance, effect.size=vectorofeffectsize)
+
+#This is the final dataframe
 #View(pvalues_and_characteristic_name)
 ```
 
@@ -140,26 +169,28 @@ pvalues_and_characteristic_name=data.frame(characteristic = characteristic.names
 ```{r}
 #Creating a function to plot the LMMs and help with visualization. 
 
-llmgraph_function=function(characteristic){
-  datafortest<-lakedata_no_recovery%>%
+lmmgraph_function <- function(characteristic){
+  datafortest <- lakedata_no_recovery%>%
   filter(characteristic_name==characteristic)%>%
-  select(year,result_value,Treatment)
+  select(year, result_value, Treatment)
 test <- lmer(result_value~Treatment +(1|year), data=datafortest, REML=FALSE)
 datafortest$test <- predict(test)
-graph=(ggplot(data=datafortest,  aes(x = Treatment, y = test, colour = as.factor(year))) + 
-  geom_point() + geom_jitter() +
-  stat_summary(fun = mean, colour = "black", geom = "point")+ggtitle(characteristic)+
-  xlab("Treatment") + ylab("Predicted Value"))
+graph <- (ggplot(data=datafortest,  aes(x = Treatment, y = test, colour = as.factor(year)))+
+    geom_point() + 
+    geom_jitter() +
+      stat_summary(fun = mean, colour = "black", geom = "point")+
+      ggtitle(characteristic)+
+      xlab("Treatment") + ylab("Predicted Value"))
 return(graph)
 }
+
 #Characteristic names needed
 characteristic.names=c(unique(lakedata_no_recovery$characteristic_name))
-#Empty List
 
+#Empty List
 LMM_plots <- list()
 
-#For loop
-
+#For loop to run all variables
 for( i in 1:19){
    plot.data <- llmgraph_function(characteristic.names[i])
  LMM_plots[[i]] <- plot.data
@@ -172,14 +203,14 @@ LMM_plots
 ```{r}
 #Had to create separate function to attempt to reduce running time. 
 #filter function to create data for each characteristic.
-filterfunction=function(characteristic){
-  data.perm=lakedata_no_recovery%>%
+filterfunction <- function(characteristic){
+  data.perm <- lakedata_no_recovery%>%
   filter(characteristic_name==characteristic)%>%
   select(Treatment,result_value,year)
   return(data.perm)
 }
 
-#Permutation function  to reshuffle data for each characteristic once. 
+#Permutation function to reshuffle data for each characteristic once. 
 
 permutation_function_mean <- function(data12){
   reshuffled <- data12
@@ -191,42 +222,50 @@ permutation_function_mean <- function(data12){
   return(bd[1,1])
 }
 
-#Final Function combines the two to run one a 1000 times and return the null plot with real value intercpet. 
+#Final Function combines the two to run permutation shuffling 1000 times and return the null plot with real value intercept. 
 
-final.perm.function= function(characteristic){
-filtered.data=filterfunction(characteristic)
+final.perm.function <- function(characteristic){
+filtered.data <- filterfunction(characteristic)
 estimates <- c()
+
 for (i in 1:1000){
   estimates[i] <- permutation_function_mean(filtered.data)
 }
-estimates=as.data.frame(estimates)
- data.perm=lakedata_no_recovery%>%
+
+estimates <- as.data.frame(estimates)
+ data.perm <- lakedata_no_recovery%>%
   filter(characteristic_name==characteristic)%>%
   select(Treatment,result_value,year)
 before.1 <- data.perm %>%  subset(Treatment == "Before") %>% summarise(mean = mean(result_value))
 during.1 <-data.perm %>% subset(Treatment == "During") %>% summarise(mean = mean(result_value))
-intercpet=(during.1-before.1)
-intercpet[1,1]
-plot_s=ggplot(estimates, aes(x=estimates)) + 
- geom_histogram( colour="black", fill="white")+ geom_vline(aes(xintercept=intercpet[1,1]),
-            color="blue", linetype="dashed", size=1)+labs(title =characteristic)+ theme_classic()
+intercept <- (during.1-before.1)
+intercept[1,1]
+plot_s <- ggplot(estimates, aes(x=estimates)) + 
+ geom_histogram( colour="black", fill="white")+ 
+  geom_vline(aes(xintercept=intercpet[1,1]), color="blue", linetype="dashed", 
+             size=1)+
+  labs(title =characteristic)+ 
+  theme_classic()
 return(plot_s)
 }
 
 #Seperate external for-loop to run final function for all variables
-characteristic.names=c(unique(lakedata_no_recovery$characteristic_name))
+characteristic.names <- c(unique(lakedata_no_recovery$characteristic_name))
 Permutions_plots <- list()
 for( i in 1:(length(characteristic.names)-1)){
-   plot.data= final.perm.function(characteristic.names[i])
+   plot.data <- final.perm.function(characteristic.names[i])
  Permutions_plots[[i]] <- plot.data
 }
 
 Permutions_plots
 ```
+
+
 ##Forecasting and Arimas
 ```{r}
 library(forecast)
 library(tidyverse)
+
 #Creating forecasts at different stages of the aquaculture. 
 #This is for all the data we had including recovery
 alldataforecastfunction=function(y){
@@ -240,7 +279,7 @@ alldataforecastfunction=function(y){
   return(plot1)
 }
 
-#This is a forecast for only the before data
+#This is a forecast that includes only the before data
 beforeforecastfunction=function(y){
   data2=lakedata%>%
     filter(characteristic_name==y)%>%
@@ -253,7 +292,7 @@ beforeforecastfunction=function(y){
   return(plot2)
   }
   
-#This is a forecast for only the during data
+#This is a forecast that includes only the during data
 duringforecastfunction=function(y){
   data3=lakedata%>%
     filter(characteristic_name==y)%>%
@@ -265,7 +304,8 @@ duringforecastfunction=function(y){
   forecast_data3 <- forecast(model3, 20) 
   plot3=plot(forecast_data3, main= y)
   return(plot(plot3))}
-#This is a forecast for only the before and during data
+
+#This is a forecast that includes the before and during data
 beforeandduringforecastfunction=function(y){
   data4=lakedata%>%
     filter(characteristic_name==y)%>%
@@ -277,13 +317,15 @@ beforeandduringforecastfunction=function(y){
   forecast_data4 <- forecast(model4, 20) 
   plot4=plot(forecast_data4, main= y)
   return(plot4)
-  }
-#We could run each loop separately for each state we needed. 
+}
+
+#We can run a for loop for each state we need. 
 allarimas=list()
 for( i in 1:(length(characteristic.names)-1)){
    plot.data= alldataforecastfunction(characteristic.names[i])
  allarimas[[i]] <- plot.data
 }
+
 beforeariimalist=list()
 for( i in 1:(length(characteristic.names)-1)){
    plot.data= beforeforecastfunction(characteristic.names[i])
@@ -305,8 +347,10 @@ for( i in 1:(length(characteristic.names)-1)){
 ```
 
 
+## Interpolating missing values from timeseries graphs
 ```{r}
 #Function for interpolating missing values for the timeseries graphs. 
+# THIS DID NOT MAKE IT INTO OUR FINAL REPORT
 
 interpolationfunction=function(k){
   data3=lakedata%>%
@@ -329,14 +373,14 @@ interpolationfunction=function(k){
 
 #Empty List 
 
-interplatedlist=list()
+interpolatedlist=list()
 
 #For Loop for all variables
 
 for( i in 1:(length(characteristic.names)-1)){
    plot.data= interpolationfunction(characteristic.names[i])
- interplatedlist[[i]] <- plot.data
+ interpolatedlist[[i]] <- plot.data
 }
-interplatedlist
+interpolatedlist
 ```
 
