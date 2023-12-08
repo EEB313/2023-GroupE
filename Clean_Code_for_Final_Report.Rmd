@@ -6,12 +6,12 @@ output:
 
 ```{r}
 #Importing data
-lakedata=read.csv("RID_196_Chem_L375.csv")
+lakedata <- read.csv("RID_196_Chem_L375.csv")
 #summary(lakedata)
 library(tidyverse)
 library(ggplot2)
 library(forecast)
-#View(lakedata)
+View(lakedata)
 
 
 # We want to look at observations grouped by whether they were taken before 
@@ -32,6 +32,7 @@ after_data <- lakedata %>%
   mutate(Treatment = "After")
 
 new_lakedata <- as.data.frame(rbind(before_data, during_data, after_data))
+rm(before_data, during_data, after_data)
 #View(new_lakedata)
 
 #Create a dataframe that excludes data from after the aquaculture experiment
@@ -54,7 +55,7 @@ lakedata_no_recovery <- new_lakedata %>%
 ```{r}
 #The Function plots the timeseries for each variable. 
 #Made a for-loop afterwards to run each variable at one time.
-generalplotfunction <- function(characeteristic){
+generalplotfunction <- function(characteristic){
   data <- new_lakedata %>%
     filter(characteristic_name==characteristic) %>%
     group_by(year) %>%
@@ -62,7 +63,7 @@ generalplotfunction <- function(characeteristic){
 graph <- ggplot(data,aes(x=year,y=mean))+
   geom_line()+ 
   geom_point()+
-  geom_vline(xintercept = 2002,color = "blue", linewidth=1.5)+geom_vline(xintercept = 2008,  color = "blue", size=1.5)+labs(title=z)
+  geom_vline(xintercept = 2002,color = "blue", linewidth=1.5)+geom_vline(xintercept = 2008,  color = "blue", size=1.5)+labs(title=characteristic)
 return(graph)
 }
 
@@ -205,7 +206,7 @@ LMM_plots <- list()
 
 #For loop to run all variables
 for( i in 1:19){
-   plot.data <- llmgraph_function(characteristic.names[i])
+   plot.data <- lmmgraph_function(characteristic.names[i])
  LMM_plots[[i]] <- plot.data
 }
 
@@ -259,7 +260,7 @@ intercept <- (during.1-before.1)
 intercept[1,1]
 plot_s <- ggplot(estimates, aes(x=estimates)) + 
  geom_histogram( colour="black", fill="white")+ 
-  geom_vline(aes(xintercept=intercpet[1,1]), color="blue", linetype="dashed", 
+  geom_vline(aes(xintercept=intercept[1,1]), color="blue", linetype="dashed", 
              size=1)+
   labs(title =characteristic)+ 
   theme_classic()
