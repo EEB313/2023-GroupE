@@ -14,7 +14,9 @@ library(forecast)
 #View(lakedata)
 
 
-# We want to look at observations grouped by whether they were taken before aquaculture began (before 2003), during the aquaculture experiment (2003-2007), and after the aquaculture experiment (post 2007)
+# We want to look at observations grouped by whether they were taken before 
+#aquaculture began (before 2003), during the aquaculture experiment (2003-2007),
+#and after the aquaculture experiment (post 2007)
 
 # mutate a column that specifies before, during, and after aquaculture
 before_data <- lakedata %>% 
@@ -33,8 +35,12 @@ new_lakedata <- as.data.frame(rbind(before_data, during_data, after_data))
 #View(new_lakedata)
 
 #Create a dataframe that excludes data from after the aquaculture experiment
-# We had very few data points for after 2007, and even less data points when you divide it by water parameter, so it was best to remove and only compare "before" and "during" values
-# We also removed NA (which was sodium) from our characteristics. The data was saved as NA which made it difficult to run some statistical analyses and we were not particularly interested in this variable to begin with.
+# We had very few data points for after 2007, and even less data points when you
+#divide it by water parameter, so it was best to remove and only compare 
+#"before" and "during" values
+# We also removed NA (which was sodium) from our characteristics. The data was 
+#saved as NA which made it difficult to run some statistical analyses and we 
+#were not particularly interested in this variable to begin with.
 
 #The dataframe below will be our main dataframe which we use for our analyses
 lakedata_no_recovery <- new_lakedata %>%
@@ -129,7 +135,9 @@ dfdata[[i]] <- df
 
 dfdata
 
-#In most cases the AICc for the Lmm was better or equal to the anova so we used the Lmm for the main variables. Our data is not independent or normally distributed so we cannot use anova.
+#In most cases the AICc for the Lmm was better or equal to the anova so we used 
+#the Lmm for the main variables. Our data is not independent or normally 
+#distributed so we cannot use anova.
 #In all cases the Arima was the model that explain the variance the best.
 ```
 
@@ -147,7 +155,10 @@ characteristic.names <- unique(lakedata_no_recovery$characteristic_name)
 
 #Create the for loop so we can run every variable at once
 for (i in 1:(length(characteristic.names)-1)){
-  #Here and for loops below, we removed TSS from the characteristic names. This was because the variable had only one value therefore it was hard to run in an statistical test. 
+  #Here and for loops below, we removed TSS from the characteristic names. 
+  #This was because the variable had only one value therefore it was hard to run 
+  #in an statistical test. 
+  
   mixed_model_data <- lakedata_no_recovery%>%
     filter(characteristic_name==characteristic.names[i])%>%
     select(result_value,Treatment,year)
@@ -158,7 +169,8 @@ for (i in 1:(length(characteristic.names)-1)){
 #Creating vector with true/false if Pvalues are less than 0.05
 signifcance <- vectorofpvalues < 0.05
 
-#Creating initial dataframe with characteristic name, pvalue, true/false for pvalue being greater than 0.05 and effect size for each model. 
+#Creating initial dataframe with characteristic name, pvalue, true/false for 
+#pvalue being greater than 0.05 and effect size for each model. 
 pvalues_and_characteristic_name <- data.frame(characteristic=characteristic.names[1:19], P.value=vectorofpvalues, signifcance.of.pvalue=signifcance, effect.size=vectorofeffectsize)
 
 #This is the final dataframe
@@ -175,7 +187,8 @@ lmmgraph_function <- function(characteristic){
   select(year, result_value, Treatment)
 test <- lmer(result_value~Treatment +(1|year), data=datafortest, REML=FALSE)
 datafortest$test <- predict(test)
-graph <- (ggplot(data=datafortest,  aes(x = Treatment, y = test, colour = as.factor(year)))+
+graph <- (ggplot(data=datafortest,  aes(x = Treatment, y = test, 
+                                        colour = as.factor(year)))+
     geom_point() + 
     geom_jitter() +
       stat_summary(fun = mean, colour = "black", geom = "point")+
@@ -214,7 +227,8 @@ filterfunction <- function(characteristic){
 
 permutation_function_mean <- function(data12){
   reshuffled <- data12
-  reshuffled$TreatmentNEW <- sample(reshuffled$Treatment, size = nrow(reshuffled), replace = T)
+  reshuffled$TreatmentNEW <- sample(reshuffled$Treatment, 
+                                    size = nrow(reshuffled), replace = T)
     
   before <- reshuffled %>% subset(TreatmentNEW == "Before") %>% summarise(mean = mean(result_value))
   during <- reshuffled %>% subset(TreatmentNEW == "During") %>% summarise(mean = mean(result_value))
@@ -222,7 +236,8 @@ permutation_function_mean <- function(data12){
   return(bd[1,1])
 }
 
-#Final Function combines the two to run permutation shuffling 1000 times and return the null plot with real value intercept. 
+#Final Function combines the two to run permutation shuffling 1000 times and 
+#return the null plot with real value intercept. 
 
 final.perm.function <- function(characteristic){
 filtered.data <- filterfunction(characteristic)
@@ -236,8 +251,10 @@ estimates <- as.data.frame(estimates)
  data.perm <- lakedata_no_recovery%>%
   filter(characteristic_name==characteristic)%>%
   select(Treatment,result_value,year)
-before.1 <- data.perm %>%  subset(Treatment == "Before") %>% summarise(mean = mean(result_value))
-during.1 <-data.perm %>% subset(Treatment == "During") %>% summarise(mean = mean(result_value))
+before.1 <- data.perm %>%  subset(Treatment == "Before") %>% 
+  summarise(mean = mean(result_value))
+during.1 <-data.perm %>% subset(Treatment == "During") %>% 
+  summarise(mean = mean(result_value))
 intercept <- (during.1-before.1)
 intercept[1,1]
 plot_s <- ggplot(estimates, aes(x=estimates)) + 
@@ -368,7 +385,8 @@ interpolationfunction=function(k){
     autolayer(as.ts(finaldata), series="Original") +
     geom_point()+
     scale_colour_manual(values=c(`Interpolated`="red",`Original`="Blue"))+
-    labs(title = k) +geom_vline(xintercept = c(22, 26), linetype = "dashed", color = "red")
+    labs(title = k) +geom_vline(xintercept = c(22, 26), linetype = "dashed", 
+                                color = "red")
 }
 
 #Empty List 
